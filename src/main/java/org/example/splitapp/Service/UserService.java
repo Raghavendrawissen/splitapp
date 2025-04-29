@@ -1,0 +1,12 @@
+package org.example.splitapp.Service;
+
+import org.example.splitapp.model.User;
+import java.util.List;
+import java.util.Optional;
+
+public interface UserService {
+    User registerUser(User user);
+    User getUserById(Long userId);
+    List<User> getAllUsers();
+    Optional<User> getUserByEmail(String email);
+}

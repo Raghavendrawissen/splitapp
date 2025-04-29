@@ -1,0 +1,4 @@
+package org.example.splitapp.config;
+
+public class SwaggerConfig {
+}

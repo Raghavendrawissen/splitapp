@@ -1,0 +1,4 @@
+package org.example.splitapp.Service;
+
+public class ExpenseServiceImpl {
+}

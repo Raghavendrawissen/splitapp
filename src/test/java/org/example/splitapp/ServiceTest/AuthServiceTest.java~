@@ -1,0 +1,146 @@
+package org.example.splitapp.ServiceTest;
+
+import org.example.splitapp.Service.AuthService;
+import org.example.splitapp.model.LoginRequest;
+import org.example.splitapp.model.RegisterRequest;
+import org.example.splitapp.model.User;
+import org.example.splitapp.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class AuthServiceTest {
+
+    @Mock
+    private UserRepository userRepository;
+    
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    
+    @Mock
+    private AuthenticationManager authenticationManager;
+
+    private AuthService authService;
+
+    @BeforeEach
+    void setUp() {
+        authService = new AuthService(userRepository, passwordEncoder, authenticationManager);
+    }
+
+    @Test
+    void register_WhenValidRequest_ShouldReturnUser() {
+        // Arrange
+        RegisterRequest request = new RegisterRequest();
+        request.setName("Test User");
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
+
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(request.getPassword())).thenReturn("encodedPassword");
+        
+        User savedUser = new User();
+        savedUser.setName(request.getName());
+        savedUser.setEmail(request.getEmail());
+        savedUser.setPasswordHash("encodedPassword");
+        savedUser.setRole("USER");
+        
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+
+        // Act
+        User result = authService.register(request);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(request.getName(), result.getName());
+        assertEquals(request.getEmail(), result.getEmail());
+        assertEquals("USER", result.getRole());
+        verify(passwordEncoder).encode(request.getPassword());
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void register_WhenEmailAlreadyExists_ShouldThrowException() {
+        // Arrange
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("existing@example.com");
+        
+        when(userRepository.findByEmail(request.getEmail()))
+            .thenReturn(Optional.of(new User()));
+
+        // Act & Assert
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            authService.register(request);
+        });
+        assertEquals("Email already registered", exception.getMessage());
+    }
+
+    @Test
+    void login_WhenValidCredentials_ShouldReturnUser() {
+        // Arrange
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
+
+        User user = new User();
+        user.setEmail(request.getEmail());
+        
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+            .thenReturn(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
+
+        // Act
+        User result = authService.login(request);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(request.getEmail(), result.getEmail());
+        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+    }
+
+    @Test
+    void login_WhenInvalidCredentials_ShouldThrowException() {
+        // Arrange
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("wrongpassword");
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+            .thenThrow(new RuntimeException("Authentication failed"));
+
+        // Act & Assert
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            authService.login(request);
+        });
+        assertEquals("Invalid credentials", exception.getMessage());
+    }
+
+    @Test
+    void login_WhenUserNotFound_ShouldThrowException() {
+        // Arrange
+        LoginRequest request = new LoginRequest();
+        request.setEmail("nonexistent@example.com");
+        request.setPassword("password123");
+
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+            .thenReturn(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.empty());
+
+        // Act & Assert
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            authService.login(request);
+        });
+        assertEquals("User not found", exception.getMessage());
+    }
+}

@@ -1,0 +1,44 @@
+package org.example.splitapp.model;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "debts")
+@IdClass(DebtId.class)
+public class Debt {
+
+    @Id
+    private Long owedBy;
+
+    @Id
+    private Long owedTo;
+
+    private BigDecimal amount;
+
+    public Long getOwedBy() {
+        return owedBy;
+    }
+
+    public void setOwedBy(Long owedBy) {
+        this.owedBy = owedBy;
+    }
+
+    public Long getOwedTo() {
+        return owedTo;
+    }
+
+    public void setOwedTo(Long owedTo) {
+        this.owedTo = owedTo;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    // Getters and Setters
+}

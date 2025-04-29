@@ -1,0 +1,59 @@
+package org.example.splitapp.Controller;
+
+import org.example.splitapp.model.Group;
+import org.example.splitapp.model.GroupMember;
+import org.example.splitapp.Service.GroupService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/groups")
+public class GroupController {
+
+    @Autowired
+    private GroupService groupService;
+
+    @PostMapping
+    public ResponseEntity<Group> createGroup(@RequestBody Group group) {
+        Group savedGroup = groupService.createGroup(group);
+        return ResponseEntity.ok(savedGroup);
+    }
+
+    @PutMapping("/{groupId}/name")
+    public ResponseEntity<Group> updateGroupName(
+            @PathVariable Long groupId,
+            @RequestParam String newName) {
+        Group updatedGroup = groupService.updateGroupName(groupId, newName);
+        return ResponseEntity.ok(updatedGroup);
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Group>> getGroupsByCreator(@PathVariable Long userId) {
+        List<Group> groups = groupService.findGroupsByCreator(userId);
+        return ResponseEntity.ok(groups);
+    }
+
+    @PostMapping("/{groupId}/members")
+    public ResponseEntity<List<GroupMember>> addGroupMembers(
+            @PathVariable Long groupId,
+            @RequestBody List<GroupMember> groupMembers) {
+        List<GroupMember> addedMembers = groupService.addMembersToGroup(groupId, groupMembers);
+        return ResponseEntity.ok(addedMembers);
+    }
+
+    @DeleteMapping("/members/{memberId}")
+    public ResponseEntity<?> removeMember(@PathVariable Long memberId) {
+        groupService.removeMember(memberId);
+        return ResponseEntity.ok().build();
+    }
+
+    // New endpoint to get all members of a group
+    @GetMapping("/{groupId}/members")
+    public ResponseEntity<List<GroupMember>> getGroupMembers(@PathVariable Long groupId) {
+        List<GroupMember> members = groupService.getGroupMembers(groupId);
+        return ResponseEntity.ok(members);
+    }
+}

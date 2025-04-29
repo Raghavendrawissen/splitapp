@@ -1,0 +1,25 @@
+spring:
+  application:
+    name=splitapp
+  datasource:
+    url: jdbc:postgresql://localhost:5432/splitapp
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  logging:
+   level:
+     org:
+       springframework:
+         security: DEBUG
+         web: DEBUG
+         hibernate: ERROR
+
+
+
+
