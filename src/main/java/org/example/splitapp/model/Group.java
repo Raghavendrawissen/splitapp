@@ -56,4 +56,12 @@ public class Group {
     public void setId(Long groupId) {
         this.groupId = groupId;
     }
+
+    public void setName(String testGroup) {
+        this.groupName = testGroup;
+    }
+
+    public Object getName() {
+                return null;
+    }
 }

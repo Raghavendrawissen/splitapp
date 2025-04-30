@@ -25,18 +25,25 @@ class AuthServiceTest {
 
     @Mock
     private UserRepository userRepository;
-    
+
     @Mock
     private PasswordEncoder passwordEncoder;
-    
+
     @Mock
     private AuthenticationManager authenticationManager;
 
     private AuthService authService;
+    private User sampleUser;
 
     @BeforeEach
     void setUp() {
         authService = new AuthService(userRepository, passwordEncoder, authenticationManager);
+        sampleUser = new User();
+        sampleUser.setUserId(1L);
+        sampleUser.setName("Sample User");
+        sampleUser.setEmail("sample@example.com");
+        sampleUser.setPasswordHash("sampleHash");
+        sampleUser.setRole("USER");
     }
 
     @Test
@@ -49,8 +56,8 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(request.getPassword())).thenReturn("encodedPassword");
-        
-        User savedUser = new User();
+
+        User savedUser = new User(sampleUser);
         savedUser.setName(request.getName());
         savedUser.setEmail(request.getEmail());
         savedUser.setPasswordHash("encodedPassword");
@@ -75,9 +82,9 @@ class AuthServiceTest {
         // Arrange
         RegisterRequest request = new RegisterRequest();
         request.setEmail("existing@example.com");
-        
+
         when(userRepository.findByEmail(request.getEmail()))
-            .thenReturn(Optional.of(new User()));
+            .thenReturn(Optional.of(new User(sampleUser)));
 
         // Act & Assert
         Exception exception = assertThrows(RuntimeException.class, () -> {
@@ -93,7 +100,7 @@ class AuthServiceTest {
         request.setEmail("test@example.com");
         request.setPassword("password123");
 
-        User user = new User();
+        User user = new User(sampleUser);
         user.setEmail(request.getEmail());
         
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))

@@ -1,0 +1,146 @@
+package org.example.splitapp.ControllerTest;
+
+import org.example.splitapp.Controller.GroupController;
+import org.example.splitapp.Service.GroupService;
+import org.example.splitapp.model.Group;
+import org.example.splitapp.model.GroupMember;
+import org.example.splitapp.model.User;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+
+@WebMvcTest(GroupController.class)
+@ExtendWith(SpringExtension.class)
+class GroupControllerTest {
+
+    @Autowired
+    private WebApplicationContext context;
+
+    private MockMvc mockMvc;
+
+    @MockBean
+    private GroupService groupService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private Group testGroup;
+    private List<Group> testGroups;
+    private List<GroupMember> testMembers;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders
+                .webAppContextSetup(context)
+                .apply(SecurityMockMvcConfigurers.springSecurity())
+                .build();
+
+        testGroup = new Group();
+        testGroup.setGroupId(1L);
+        testGroup.setGroupName("Test Group");
+
+        testGroups = Arrays.asList(testGroup);
+
+        testMembers = Arrays.asList(
+            new GroupMember() {{
+                setId(1L);
+                setGroup(testGroup);
+                setUser(new User(sampleUser) {{ setId(1L); }});
+            }}
+        );
+    }
+
+    @Test
+    @WithMockUser
+    void createGroup_ShouldReturnCreatedGroup() throws Exception {
+        when(groupService.createGroup(any(Group.class))).thenReturn(testGroup);
+
+        mockMvc.perform(post("/api/groups")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(testGroup))
+                .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.groupId").value(testGroup.getGroupId()))
+                .andExpect(jsonPath("$.groupName").value(testGroup.getGroupName()));
+    }
+
+    @Test
+    @WithMockUser
+    void updateGroupName_ShouldReturnUpdatedGroup() throws Exception {
+        String newName = "Updated Group Name";
+        testGroup.setGroupName(newName);
+        when(groupService.updateGroupName(eq(1L), eq(newName))).thenReturn(testGroup);
+
+        mockMvc.perform(put("/api/groups/1/name")
+                .param("newName", newName)
+                .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.groupName").value(newName));
+    }
+
+    @Test
+    @WithMockUser
+    void getGroupsByCreator_ShouldReturnGroups() throws Exception {
+        when(groupService.findGroupsByCreator(1L)).thenReturn(testGroups);
+
+        mockMvc.perform(get("/api/groups/user/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].groupId").value(testGroup.getGroupId()))
+                .andExpect(jsonPath("$[0].groupName").value(testGroup.getGroupName()));
+    }
+
+    @Test
+    @WithMockUser
+    void addGroupMembers_ShouldReturnOk() throws Exception {
+        List<Long> memberIds = Arrays.asList(1L, 2L);
+
+        mockMvc.perform(post("/api/groups/1/members")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(memberIds))
+                .with(csrf()))
+                .andExpect(status().isOk());
+
+        verify(groupService).addMembersToGroup(eq(1L), eq(memberIds));
+    }
+
+    @Test
+    @WithMockUser
+    void removeMember_ShouldReturnOk() throws Exception {
+        mockMvc.perform(delete("/api/groups/members/1")
+                .with(csrf()))
+                .andExpect(status().isOk());
+
+        verify(groupService).removeMember(1L);
+    }
+
+    @Test
+    @WithMockUser
+    void getGroupMembers_ShouldReturnMembers() throws Exception {
+        when(groupService.getGroupMembers(1L)).thenReturn(testMembers);
+
+        mockMvc.perform(get("/api/groups/1/members"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(testMembers.get(0).getId()));
+    }
+}

@@ -31,10 +31,16 @@ class GroupServiceTest {
     private GroupMemberRepository groupMemberRepository;
 
     private GroupServiceImpl groupService;
+    private User sampleUser;
 
     @BeforeEach
     void setUp() {
         groupService = new GroupServiceImpl();
+        sampleUser = new User();
+        sampleUser.setId(1L);
+        sampleUser.setName("Sample User");
+        sampleUser.setEmail("sample@example.com");
+        sampleUser.setPasswordHash("sampleHash");
         // Set mocked repositories
         org.springframework.test.util.ReflectionTestUtils.setField(groupService, "groupRepository", groupRepository);
         org.springframework.test.util.ReflectionTestUtils.setField(groupService, "userRepository", userRepository);
@@ -76,7 +82,7 @@ class GroupServiceTest {
         // Arrange
         Group group = new Group();
         group.setGroupName("");
-        group.setCreatedBy(new User());
+        group.setCreatedBy(new User(sampleUser));
 
         // Act & Assert
         assertThrows(IllegalArgumentException.class, () -> groupService.createGroup(group));
@@ -125,9 +131,9 @@ class GroupServiceTest {
         Group group = new Group();
         group.setId(groupId);
 
-        User user1 = new User();
+        User user1 = new User(sampleUser);
         user1.setId(2L);
-        User user2 = new User();
+        User user2 = new User(sampleUser);
         user2.setId(3L);
         List<User> users = Arrays.asList(user1, user2);
 
@@ -147,10 +153,10 @@ class GroupServiceTest {
         // Arrange
         Long memberId = 1L;
         GroupMember member = new GroupMember();
-        User user = new User();
+        User user = new User(sampleUser);
         user.setId(2L);
         Group group = new Group();
-        User creator = new User();
+        User creator = new User(sampleUser);
         creator.setId(1L);
         group.setCreatedBy(creator);
         member.setUser(user);
@@ -170,7 +176,7 @@ class GroupServiceTest {
         // Arrange
         Long memberId = 1L;
         GroupMember member = new GroupMember();
-        User creator = new User();
+        User creator = new User(sampleUser);
         creator.setId(1L);
         Group group = new Group();
         group.setCreatedBy(creator);

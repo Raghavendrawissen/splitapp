@@ -1,0 +1,123 @@
+package org.example.splitapp.ControllerTest;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.splitapp.Controller.AuthController;
+import org.example.splitapp.config.SecurityConfig;
+import org.example.splitapp.exception.InvalidCredentialsException;
+import org.example.splitapp.model.LoginRequest;
+import org.example.splitapp.model.RegisterRequest;
+import org.example.splitapp.exception.GlobalExceptionHandler;
+import org.example.splitapp.model.User;
+import org.example.splitapp.Service.AuthService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(AuthController.class)
+@Import({SecurityConfig.class, GlobalExceptionHandler.class})
+class AuthControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private AuthService authService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private User sampleUser;
+
+    @BeforeEach
+    void setUp() {
+        sampleUser = new User();
+        sampleUser.setId(1L);
+        sampleUser.setUsername("testuser");
+        sampleUser.setEmail("test@example.com");
+        sampleUser.setPasswordHash("hashed-password");
+    }
+
+    @Test
+    void testRegister() throws Exception {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setUsername("testuser");
+        registerRequest.setEmail("test@example.com");
+        registerRequest.setPassword("password123");
+
+        when(authService.register(any(RegisterRequest.class))).thenReturn(sampleUser);
+
+        mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", is("testuser")))
+                .andExpect(jsonPath("$.email", is("test@example.com")))
+                .andExpect(jsonPath("$.passwordHash").value(nullValue()));
+    }
+
+    @Test
+    void testLogin() throws Exception {
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("test@example.com");
+        loginRequest.setPassword("password123");
+
+        when(authService.login(any(LoginRequest.class))).thenReturn(sampleUser);
+
+        mockMvc.perform(post("/api/auth/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", is("testuser")))
+                .andExpect(jsonPath("$.email", is("test@example.com")))
+                .andExpect(jsonPath("$.passwordHash").value(nullValue()));
+    }
+
+    @Test
+    void testLogin_InvalidCredentials() throws Exception {
+        LoginRequest loginRequest = new LoginRequest();
+        loginRequest.setEmail("test@example.com");
+        loginRequest.setPassword("wrongpassword");
+
+        when(authService.login(any(LoginRequest.class)))
+                .thenThrow(new InvalidCredentialsException("Invalid credentials"));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void testRegister_InvalidEmail() throws Exception {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setUsername("testuser");
+        registerRequest.setEmail("invalid-email");
+        registerRequest.setPassword("password123");
+
+        when(authService.register(any(RegisterRequest.class)))
+                .thenThrow(new RuntimeException("Invalid email format"));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isBadRequest());
+    }
+}

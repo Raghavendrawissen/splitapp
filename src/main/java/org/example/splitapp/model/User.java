@@ -19,7 +19,11 @@ public class User {
     private String role = "USER";
 
     // Default constructor
-    public User() {}
+    public User(User sampleUser) {}
+
+    public User() {
+
+    }
 
     // Modified getId and setId methods to use userId
     public Long getId() {
@@ -69,5 +73,9 @@ public class User {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public void setUsername(String testuser) {
+
     }
 }

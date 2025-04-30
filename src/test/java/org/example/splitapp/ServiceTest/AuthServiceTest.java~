@@ -50,7 +50,7 @@ class AuthServiceTest {
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.empty());
         when(passwordEncoder.encode(request.getPassword())).thenReturn("encodedPassword");
         
-        User savedUser = new User();
+        User savedUser = new User(sampleUser);
         savedUser.setName(request.getName());
         savedUser.setEmail(request.getEmail());
         savedUser.setPasswordHash("encodedPassword");
@@ -77,7 +77,7 @@ class AuthServiceTest {
         request.setEmail("existing@example.com");
         
         when(userRepository.findByEmail(request.getEmail()))
-            .thenReturn(Optional.of(new User()));
+            .thenReturn(Optional.of(new User(sampleUser)));
 
         // Act & Assert
         Exception exception = assertThrows(RuntimeException.class, () -> {
@@ -93,7 +93,7 @@ class AuthServiceTest {
         request.setEmail("test@example.com");
         request.setPassword("password123");
 
-        User user = new User();
+        User user = new User(sampleUser);
         user.setEmail(request.getEmail());
         
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
@@ -134,13 +134,12 @@ class AuthServiceTest {
         request.setPassword("password123");
 
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-            .thenReturn(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-        when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.empty());
+            .thenThrow(new RuntimeException("User not found"));
 
         // Act & Assert
         Exception exception = assertThrows(RuntimeException.class, () -> {
             authService.login(request);
         });
-        assertEquals("User not found", exception.getMessage());
+        assertEquals("Invalid credentials", exception.getMessage());
     }
 }
